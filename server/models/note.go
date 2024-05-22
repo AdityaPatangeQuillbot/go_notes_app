@@ -5,4 +5,5 @@ type Note struct {
 	Title   string
 	Content string
 	Tags    []string
+	Color   string
 }
