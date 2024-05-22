@@ -8,6 +8,11 @@ import (
 )
 
 func helloHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
 	name := r.URL.Path[1:]
 	if name == "" {
 		fmt.Fprintf(w, "Hello, World!")
