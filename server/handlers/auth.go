@@ -5,11 +5,14 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"log"
 	"main/core"
 	"main/db"
 	"main/models"
 	"net/http"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -35,11 +38,13 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	dbClient, err := core.GetDbClient()
 
 	if err != nil {
+		log.Default().Println("error connecting to database", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("database connection error"), http.StatusInternalServerError)
 		return
 	}
 
 	if rawBody == nil {
+		log.Default().Println("invalid request body", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("invalid request body"), http.StatusBadRequest)
 		return
 	}
@@ -49,18 +54,21 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&data)
 
 	if err != nil {
+		log.Default().Println("invalid request body", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("invalid request body"), http.StatusBadRequest)
 		return
 	}
 
 	foundUser, err := dbClient.User.FindFirst(db.User.Email.Equals(data.Username)).Exec(ctx)
 
-	if err != nil {
+	if err != nil && err != db.ErrNotFound {
+		log.Default().Println("failed to fetch user", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("system error"), http.StatusInternalServerError)
 		return
 	}
 
 	if foundUser != nil {
+		log.Default().Println("user already exists", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("user already exists"), http.StatusConflict)
 		return
 	}
@@ -68,19 +76,22 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	_, err = core.ValidateSignupRequest(data)
 
 	if err != nil {
+		log.Default().Println("validation failed", err)
 		core.FormatErrorResponseJSON(&w, err, http.StatusBadRequest)
 		return
 	}
 
 	// timing safe comparison
 	if subtle.ConstantTimeCompare([]byte(data.Password), []byte(data.ConfirmPassword)) == 0 {
+		log.Default().Println("passwords do not match", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("passwords do not match"), http.StatusBadRequest)
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	hashedPassword, err := core.HashPassword(data.Password)
 
 	if err != nil {
+		log.Default().Println("failed to compute hash", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("system error"), http.StatusInternalServerError)
 		return
 	}
@@ -89,6 +100,7 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	createdUser, err := dbClient.User.CreateOne(db.User.Email.Set(data.Username)).Exec(ctx)
 
 	if err != nil || createdUser == nil {
+		log.Default().Println("failed to create user", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("failed to create user"), http.StatusInternalServerError)
 		return
 	}
@@ -96,6 +108,7 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	storedPasswordHash, err := dbClient.Passwords.CreateOne(db.Passwords.User.Link(db.User.ID.Equals(createdUser.ID)), db.Passwords.PasswordHash.Set(string(hashedPassword))).Exec(ctx)
 
 	if err != nil || storedPasswordHash == nil {
+		log.Default().Println("failed to store password", err)
 		core.FormatErrorResponseJSON(&w, fmt.Errorf("failed to store password"), http.StatusInternalServerError)
 		return
 	}
