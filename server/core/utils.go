@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func FormatErrorResponseJSON(w *http.ResponseWriter, err error, status int) error {
@@ -21,4 +23,14 @@ func FormatErrorResponseJSON(w *http.ResponseWriter, err error, status int) erro
 	}
 
 	return nil
+}
+
+func HashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(hash), nil
 }
