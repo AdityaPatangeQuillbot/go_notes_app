@@ -33,7 +33,8 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	rawBody := r.Body
 
 	if rawBody == nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("Invalid request body"), http.StatusBadRequest)
+		return
 	}
 
 	var data models.SignupRequest
@@ -41,27 +42,34 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&data)
 
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("Invalid request body"), http.StatusBadRequest)
+		return
+	}
+
+	_, err = core.ValidateSignupRequest(data)
+
+	if err != nil {
+		core.FormatErrorResponseJSON(&w, err, http.StatusBadRequest)
 		return
 	}
 
 	// timing safe comparison
 	if subtle.ConstantTimeCompare([]byte(data.Password), []byte(data.ConfirmPassword)) == 0 {
-		http.Error(w, "Passwords do not match", http.StatusBadRequest)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("Passwords do not match"), http.StatusBadRequest)
 		return
 	}
 
 	dbClient, err := core.GetDbClient()
 
 	if err != nil {
-		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("Database connection error"), http.StatusInternalServerError)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 
 	if err != nil {
-		http.Error(w, "System error", http.StatusInternalServerError)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("System error"), http.StatusInternalServerError)
 		return
 	}
 
@@ -69,14 +77,14 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	createdUser, err := dbClient.User.CreateOne(db.User.Email.Set(data.Username)).Exec(ctx)
 
 	if err != nil || createdUser == nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("Failed to create user"), http.StatusInternalServerError)
 		return
 	}
 
 	storedPasswordHash, err := dbClient.Passwords.CreateOne(db.Passwords.User.Link(db.User.ID.Equals(createdUser.ID)), db.Passwords.PasswordHash.Set(string(hashedPassword))).Exec(ctx)
 
 	if err != nil || storedPasswordHash == nil {
-		http.Error(w, "Failed to store password", http.StatusInternalServerError)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("Failed to store password"), http.StatusInternalServerError)
 		return
 	}
 
