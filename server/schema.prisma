@@ -7,6 +7,14 @@ generator db {
     provider = "go run github.com/steebchen/prisma-client-go"
 }
 
+model User {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    email     String   @unique
+    name      String?
+}
+
 model Note {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
