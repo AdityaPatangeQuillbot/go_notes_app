@@ -39,6 +39,18 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	foundUser, err := dbClient.User.FindFirst(db.User.Email.Equals(data.Username)).Exec(ctx)
+
+	if err != nil {
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("system error"), http.StatusInternalServerError)
+		return
+	}
+
+	if foundUser != nil {
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("user already exists"), http.StatusBadRequest)
+		return
+	}
+
 	_, err = core.ValidateSignupRequest(data)
 
 	if err != nil {
