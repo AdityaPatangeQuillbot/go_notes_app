@@ -47,7 +47,7 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if foundUser != nil {
-		core.FormatErrorResponseJSON(&w, fmt.Errorf("user already exists"), http.StatusBadRequest)
+		core.FormatErrorResponseJSON(&w, fmt.Errorf("user already exists"), http.StatusConflict)
 		return
 	}
 
