@@ -8,11 +8,19 @@ generator db {
 }
 
 model User {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    email     String   @unique
-    name      String?
+    id           String      @id @default(cuid())
+    createdAt    DateTime    @default(now())
+    updatedAt    DateTime    @updatedAt
+    email        String      @unique
+    name         String?
+    profileImage String?     @default("https://cdn.iconscout.com/icon/free/png-256/avatar-380-456332.png")
+    Passwords    Passwords[]
+}
+
+model Passwords {
+    userId       String @id
+    user         User   @relation(fields: [userId], references: [id])
+    passwordHash String
 }
 
 model Note {
