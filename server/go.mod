@@ -2,4 +2,12 @@ module main
 
 go 1.22.3
 
-require github.com/AdityaPatangeQuillBot/go_notes_app v0.0.0-20240522190549-defbd59a740f
+require (
+	github.com/joho/godotenv v1.5.1
+	github.com/shopspring/decimal v1.4.0
+)
+
+require (
+	github.com/steebchen/prisma-client-go v0.37.0
+	golang.org/x/crypto v0.23.0
+)
