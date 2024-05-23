@@ -13,6 +13,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func HelloHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	name := r.URL.Path[1:]
+	if name == "" {
+		fmt.Fprintf(w, "Hello, World!")
+	} else {
+		fmt.Fprintf(w, "Hello, %s!", name)
+	}
+}
+
 func UserSignup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	ctx := context.Background()
