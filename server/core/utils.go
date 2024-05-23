@@ -8,7 +8,8 @@ import (
 
 func FormatErrorResponseJSON(w *http.ResponseWriter, err error, status int) error {
 	response := map[string]interface{}{
-		"error": err.Error(),
+		"error":       err.Error(),
+		"status_code": status,
 	}
 
 	(*w).WriteHeader(status)
